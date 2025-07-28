@@ -1,14 +1,16 @@
 mod summarizer;
 mod synthesizer;
-mod utils;
+pub mod utils;
+
+use clap::Parser;
+use std::{collections::HashMap, path::PathBuf};
+use zr_app::config_builder;
 
 use crate::{
     summarizer::FileSummarizer,
     synthesizer::Synthesizer,
     utils::{get_files, remove_think},
 };
-use clap::Parser;
-use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -17,16 +19,26 @@ struct Args {
     pub depth: Option<u8>,
 }
 
-const MODEL_NAME: &str = "summarizer"; // Change to use config file
-const MAX_DEPTH: u8 = 6;
+config_builder! {
+    Conf {
+        model: Model {
+            name: String = "summarizer",
+        },
+        recusive: Recusive {
+            default_depth: u8 = 8,
+        }
+    }
+}
 
 #[tokio::main]
+#[zr_app::app(conf = Conf, app_folder = "~/.summarize")]
 async fn main() {
     let Args { paths, depth } = Args::parse();
+    let depth = depth.unwrap_or(config.recusive.default_depth);
 
     let mut files = Vec::new();
     for path in paths {
-        files.extend(get_files(path, depth.unwrap_or(MAX_DEPTH)));
+        files.extend(get_files(path, depth));
     }
 
     match files.len() {
@@ -34,7 +46,7 @@ async fn main() {
         1 => {
             let summarizer = FileSummarizer::new();
             if let Ok(response) = summarizer
-                .summarize_file(MODEL_NAME, files[0].clone())
+                .summarize_file(&config.model.name, files[0].clone())
                 .await
             {
                 println!("{}", remove_think(&response.message.content));
@@ -47,7 +59,7 @@ async fn main() {
             for file in files {
                 let summary = remove_think(
                     &summarizer
-                        .summarize_file(MODEL_NAME, file.clone())
+                        .summarize_file(&config.model.name, file.clone())
                         .await
                         .unwrap()
                         .message
@@ -57,13 +69,13 @@ async fn main() {
             }
             let synthesis = remove_think(
                 &synthesizer
-                    .synthesize(MODEL_NAME, summaries)
+                    .synthesize(&config.model.name, summaries)
                     .await
                     .unwrap()
                     .message
                     .content,
             );
-            println!("{}", synthesis);
+            println!("{synthesis}");
         }
     }
 }

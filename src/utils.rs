@@ -78,7 +78,7 @@ pub fn remove_think(src: &str) -> String {
         if !in_think && src[idx..].starts_with("<think>") {
             in_think = true;
             i = idx + "<think>".len();
-            while let Some((next_idx, _)) = chars.next() {
+            for (next_idx, _) in chars.by_ref() {
                 if next_idx >= i {
                     break;
                 }
@@ -86,7 +86,7 @@ pub fn remove_think(src: &str) -> String {
         } else if in_think && src[idx..].starts_with("</think>") {
             in_think = false;
             i = idx + "</think>".len();
-            while let Some((next_idx, _)) = chars.next() {
+            for (next_idx, _) in chars.by_ref() {
                 if next_idx >= i {
                     break;
                 }
@@ -98,6 +98,32 @@ pub fn remove_think(src: &str) -> String {
             chars.next(); // skip characters inside <think>...</think>
         }
     }
+    result
+}
 
-    result.trim().to_string()
+#[cfg(test)]
+mod tests {
+    use std::{path::PathBuf, str::FromStr};
+
+    use crate::utils::{get_files, remove_think};
+
+    #[test]
+    fn test_remove_think() {
+        let with_think = include_str!("tests/message_with_think.txt");
+        let without_think = include_str!("tests/message_without_think.txt");
+        assert_eq!(remove_think(with_think).trim(), without_think.trim())
+    }
+
+    #[test]
+    fn test_get_files() {
+        let file_name = vec![
+            "main.rs",
+            "summarizer.rs",
+            "synthesizer.rs",
+            "utils.rs",
+            "message_with_think.txt",
+            "message_without_think.txt",
+        ];
+        let files = get_files(PathBuf::from("."), 2);
+    }
 }
