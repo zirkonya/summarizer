@@ -22,7 +22,8 @@ struct Args {
 config_builder! {
     Conf {
         model: Model {
-            name: String = "summarizer",
+            summarizer: String = "summarizer",
+            synthesizer: String = "synthesizer",
         },
         recusive: Recusive {
             default_depth: u8 = 8,
@@ -46,7 +47,7 @@ async fn main() {
         1 => {
             let summarizer = FileSummarizer::new();
             if let Ok(response) = summarizer
-                .summarize_file(&config.model.name, files[0].clone())
+                .summarize_file(&config.model.summarizer, files[0].clone())
                 .await
             {
                 println!("{}", remove_think(&response.message.content));
@@ -59,7 +60,7 @@ async fn main() {
             for file in files {
                 let summary = remove_think(
                     &summarizer
-                        .summarize_file(&config.model.name, file.clone())
+                        .summarize_file(&config.model.summarizer, file.clone())
                         .await
                         .unwrap()
                         .message
@@ -69,7 +70,7 @@ async fn main() {
             }
             let synthesis = remove_think(
                 &synthesizer
-                    .synthesize(&config.model.name, summaries)
+                    .synthesize(&config.model.synthesizer, summaries)
                     .await
                     .unwrap()
                     .message
